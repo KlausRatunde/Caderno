@@ -1,0 +1,274 @@
+---
+title: "Aula_07"
+format: html
+editor: visual
+message: false
+warning: false
+---
+
+## AULA 08 - 08/05/2024
+
+## Pacotes
+
+```{r}
+library(gsheet)
+library(tidyverse)
+library(DHARMa)
+library(emmeans)
+library(patchwork)
+library(ggthemes)
+library(performance)
+library(multcomp)
+library(agricolae)
+library(MASS)
+library(forecast)
+library(writexl)
+library(epifitter)
+```
+
+Na aula de hoje, realizaremos a análise dos dados de um experimento de blocos casualizados. Como são 3 fatores, deveremos realizar 3 ANOVA's para comparação das médias.
+
+### Importação dos dados
+
+```{r}
+soja <- gsheet2tbl("https://docs.google.com/spreadsheets/u/7/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=866852711")
+soja
+```
+
+```{r}
+soja <- soja |> 
+  mutate(TRAT = as.factor(TRAT),
+         BLOCO = as.factor(BLOCO))
+
+```
+
+```{r}
+dfc <- soja |> 
+  ggplot(aes(TRAT, DFC))+
+  geom_jitter(width = 0.5, color = "gray")+
+  stat_summary(fun.data = "mean_cl_boot", color = "black", size = 0.5)+
+  theme_classic()
+  
+
+fer <- soja |> 
+  ggplot(aes(TRAT, FER))+
+  geom_jitter(width = 0.5, color = "gray")+
+   stat_summary(fun.data = "mean_cl_boot", color = "black", , size = 0.5)+
+  theme_classic()
+
+prod <- soja |> 
+  ggplot(aes(TRAT, PROD))+
+  geom_jitter(width = 0.5, color = "gray")+
+   stat_summary(fun.data = "mean_cl_boot", color = "black", , size = 0.5)+
+  theme_classic()
+
+plot1 <- dfc + fer + prod
+plot1
+```
+
+# Análise de variância
+
+O bloco entra como efeito fixo, por isso soma-se.
+
+## DFC
+
+```{r}
+aov_dfc <- lm(DFC ~ TRAT + BLOCO,
+              data = soja)
+anova(aov_dfc)
+```
+
+Checar homocedasticidade e normalidade
+
+```{r}
+check_heteroscedasticity(aov_dfc)
+check_normality(aov_dfc)
+```
+
+Neste caso, não é calculada a média aritmética. É uma estimativa do valor médio pelo modelo de ANOVA. É comum acharmos que os valores médios estão errados, por serem diferentes da média aritmética.
+
+```{r}
+medias_dfc <- emmeans(aov_dfc, ~ TRAT)
+medias_dfc
+```
+
+Neste comando, os valores à direita das médias (diagonal) indicam se há ou não diferença. Os valores à esquerda indicam a distância em relação à média.
+
+```{r}
+pwpm(medias_dfc)
+```
+
+Neste comando, o que poderia ser feito manualmente chuck anterior, pode ser feito automaticamente, indicando se existe ou não diferença.
+
+Premissas da ANOVA.
+
+Normalidade dos resíduos e homogenidade da variância.
+
+```{r}
+cld(medias_dfc, Letters = letters)
+```
+
+Repetindo para os outros exemplos (FER e PROD)
+
+## FER
+
+```{r}
+aov_fer <- lm(FER ~ TRAT + BLOCO,
+              data = soja)
+anova(aov_fer)
+```
+
+```{r}
+check_heteroscedasticity(aov_fer)
+check_normality(aov_fer)
+
+plot(simulateResiduals(aov_fer))
+```
+
+Como não há normalidade e heterocedasticidade, tentaremos transformar os dados.
+
+Realizou-se a transformação boxcox. Lambda.
+
+```{r}
+b <-boxcox((lm(soja$FER + 0.1 ~ 1)))
+lambda <- b$x[which.max(b$y)]
+```
+
+```{r}
+soja$FER2 <- (soja$FER ^ lambda - 1) / lambda
+
+aov_fer2 <- aov(FER2 ~ TRAT + BLOCO, data = soja)
+
+anova(aov_fer2)
+
+check_normality(aov_fer2)
+check_heteroscedasticity(aov_fer2)
+```
+
+```{r}
+medias_fer2 <- emmeans(aov_fer2, ~ TRAT)
+
+medias_fer2
+
+pwpm(medias_fer2)
+
+cld(medias_fer2, Letters = letters)
+```
+
+## PROD
+
+```{r}
+aov_prod <- lm (PROD ~ TRAT + BLOCO, 
+                data = soja)
+
+anova(aov_prod)
+
+check_normality(aov_prod)
+check_heteroscedasticity(aov_prod)
+
+medias_prod <- emmeans(aov_prod, ~ TRAT)
+
+medias_prod
+
+pwpm(medias_prod)
+
+medias_prod_grupo <- cld(medias_prod, Letters = letters)
+medias_prod_grupo
+```
+
+```{r}
+df_prod <- data.frame(medias_prod)
+df_prod |> 
+  ggplot(aes(TRAT, emmean))+
+  geom_point()+
+  ylim(2000, 6500)+
+  geom_errorbar(aes(min = lower.CL,
+                    max = upper.CL,
+                width = 0.1))+
+  theme_classic()+
+  annotate(geom = "text", x = 1.2, y = 4200,
+           label = "A")+
+  annotate(geom = "text", x = 2.3, y = 4900,
+           label = "AB")+
+  annotate(geom = "text", x = 3.3, y = 5150,
+           label = "AB")+
+  annotate(geom = "text", x = 4.3, y = 5150,
+           label = "AB")+
+  annotate(geom = "text", x = 5.3, y = 5150,
+           label = "AB")+
+  annotate(geom = "text", x = 6.3, y = 5300,
+           label = "AB")+
+  annotate(geom = "text", x = 7.3, y = 5150,
+           label = "AB")+
+  annotate(geom = "text", x = 8.2, y = 5100,
+           label = "B")
+  
+```
+
+Para criar uma tabela de acordo com os dados usados no grafico acima.
+
+```{r}
+df_prod <- cld(medias_prod, Letters = LETTERS)
+df_prod <- as.data.frame(df_prod)
+knitr::kable(df_prod |> dplyr::select(TRAT, emmean, .group))
+
+write_xlsx(df_prod, "df.xlsx")
+```
+
+## Aula 08 - parte 02
+
+Dados na planilha "dados diversos", usar a aba "curve"
+
+```{r}
+curve <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=1807247585")
+curve
+```
+
+Experimento de campo, em blocos casualizados.
+
+```{r}
+curve |>
+  group_by(Irrigation, day) |> 
+  summarise(mean_sev = mean(severity)) |> 
+  ggplot(aes(day, mean_sev, color = Irrigation))+
+  #geom_area(aes(
+  geom_point(color = "black")+
+  geom_line()+
+  facet_wrap(~ Irrigation)+
+  labs(title = "Índice de severidade",
+       x = "Dias", 
+       y = "Severidade (%)")+
+  theme(legend.title.position = "bottom")+
+  theme_bw()
+  
+```
+
+Calcular a curva abaixo da área de progresso.
+
+```{r}
+curve2 <- curve |>
+  group_by(Irrigation, rep) |> 
+  summarise(aacpd = AUDPC(day, severity))
+curve2
+```
+
+aacpd = area abaixo da curva de progresso
+
+### Anova
+
+```{r}
+m_curve <-lm(aacpd ~ Irrigation + factor(rep),
+             data = curve2)
+anova(m_curve)
+```
+
+Não foi observada diferença entre os tipos de irrigação quando calculada a AACDP.
+
+```{r}
+check_heteroscedasticity(m_curve)
+check_normality(m_curve)
+```
+
+```{r}
+cv.model(m_curve)
+```

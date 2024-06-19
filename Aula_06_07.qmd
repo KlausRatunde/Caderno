@@ -1,0 +1,748 @@
+---
+title: "Aula_06"
+format: html
+editor: visual
+message: false
+warning: false
+---
+
+# AULA 06 - 17/04/2024
+
+## Estatística Descritiva e Estatística Inferencial
+
+## Pacotes
+
+```{r}
+library(tidyverse)
+library(gsheet)
+library(readxl)
+library(report)
+library(emmeans)
+library(multcomp)
+library(multcompView)
+library(DHARMa)
+library(performance)
+library(agricolae)
+library(car)
+#library(MASS)
+```
+
+### Estatística Descritiva
+
+A estatística descritiva pode ser resumida na qual organiza a coleta, a apuração e a descrição dos dados para amostras, sem almejar conclusões categóricas para as populações nas quais essas amostras se originaram.
+
+### Carregando o pacote de dados
+
+Pacote de dados disponíveis em planilha no google drive.
+
+```{r}
+mg <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=983033137")
+
+theme_set(theme_bw())
+
+mg
+```
+
+### Tratamentos independentes
+
+Um pesquisador conduziu um experimento com o objetivo de avaliar o efeito de um micronutriente, o magnésio (Mg), adicionado na solução do solo cultivado com plantas de arroz, no manejo de uma doença fúngica. O experimento foi conduzido em delineamento inteiramente casualizado com 10 repetições, sendo cada repetição um vaso de planta. Um dos tratamentos é o chamado controle, ou testemunha, sem o suplemento mineral. O segundo é aquele com o suplemento do Mg na dose de 2 mM. Em cada uma das repetições foi obtido um valor médio do comprimento de lesões em um determinado tempo após a inoculação.
+
+Os gráficos a seguir mostram que o incremento de magnésio reduz a severidade da doença, ou seja, induz a resistência. Visualmente indica que existe um efeito. Mas, uma hipótese científica deve ser testada.
+
+Hipótese: o incremento de magnésio aumenta a resistência a doença;
+
+Hipótese estatística: não existem diferenças entre os tratamentos.
+
+Usa-se o teste "T" para número de amostras igual ou inferior a 30. Usa-se o teste "T" para grupos independentes.
+
+Premissas: Teste de normalidade e variâncias homogêneas.
+
+Podemos assumir estas premissas através de uma análise exploratória, através da simetria do boxplot. Assume-se visualmente que as variâncias são iguais e que existe uma normalidade, mas, isso pode ser testado. Devemos primeiramente verificar as premissas.
+
+Se a distribuição não for normal, devemos realizar o teste não paramétrico, como o shapiro-wilk.
+
+```{r}
+mg |> 
+  ggplot(aes(trat, comp))+
+  geom_boxplot()
+```
+
+## Teste estatístico
+
+### Teste "T" student
+
+O teste t compara duas médias e mostra se as diferenças entre essas médias são significativas. A necessidade de determinar se duas médias de amostras são diferentes entre si é uma situação extremamente frequente em pesquisas científicas. Como todo teste estatístico, o teste t também tem como produto a medida do p valor. Ou seja, calculamos a probabilidade da diferença encontrada (entre as médias) terem sido por acaso.
+
+É ideal que tenhamos os vetores separados em duas colunas, em formato largo. Para realizar essa conversão, faremos o seguite comando, atribuindo ao mg2.
+
+Precisamos de uma coluna para cada tratamento.
+
+```{r}
+?t.test
+
+mg2 <- mg |> 
+  pivot_wider(names_from = trat,
+              values_from = comp)
+
+mg2
+```
+
+### Realizando o teste T-student
+
+A primeira média (X) é referente ao tratamento mg2, que foi incluído primeiro na fórmula.
+
+Encontrou-se uma diferença, mesmo em uma probabilidade muito pequena.
+
+Até agora, assume-se que o teste T é confiável, existe uma diferença estatística.
+
+```{r}
+teste1 <- t.test(mg2$Mg2, mg2$control)
+  teste1
+```
+
+Vamos obter estatísticas que descrevem o conjunto, seja a tendência central ou a dispersão dos dados. No caso, será a média, variância, desvio padrão, erro padrão e intervalo de confiança - esse último para inferência visual.
+
+```{r}
+dat2 <- mg |> 
+  group_by(trat) |> 
+  summarise(mean_comp = mean(comp),
+    sd_comp = sd(comp),
+    var_comp = var(comp),
+    n = n(),
+    se_comp = sd_comp / sqrt(n - 1),
+    ci = se_comp * qt(0.025, df = 9))
+dat2
+```
+
+Já podemos visualizar os dados com as estatísticas calculadas. Abaixo, as barras verticais representam o intervalo de confiança 95%.
+
+## Teste de normalidade
+
+### Shapiro wilk
+
+O Teste de Shapiro-Wilk tem como objetivo avaliar se uma distribuição é semelhante a uma [distribuição normal](https://www.blog.psicometriaonline.com.br/blog/distribuicao-normal/). A distribuição normal também pode ser chamada de gaussiana e sua forma assemelha-se a de um sino. Esse tipo de distribuição é muito importante, por ser frequentemente usada para modelar fenômenos naturais.
+
+Se o valor foi acima de 0,05, aceito que a distribuição é normal. Menor que 0,05 rejeita-se a hipótese nula, de que a distribuição não é normal.
+
+Neste caso, assume-se que a distribuição é normal.
+
+```{r}
+shapiro.test(mg2$control)
+```
+
+Histograma para observação de normalidade.
+
+```{r}
+hist(mg2$control)
+```
+
+```{r}
+hist(mg2$Mg2)
+```
+
+```{r}
+shapiro.test(mg2$Mg2)
+```
+
+Para comparar variâncias.
+
+Posso assumir como variáveis homogêneas, valor de P mostrou-se alto. Podemos continuar normalmente com o teste T.
+
+Verificaram-se as premissas de normalidade e de variância.
+
+```{r}
+var.test(mg2$control, mg2$Mg2)
+```
+
+Assumindo a variância como verdadeira, informando-a como homogênea.
+
+```{r}
+var.test(mg2$control, mg2$Mg2, 
+         var.equal = TRUE)
+```
+
+Quanto mais próximos os pontos estão da linha, indicam maior normalidade das variâncias. Isso quer dizer que as resultados dentro de cada grupo foram semelhantes.
+
+```{r}
+qqnorm(mg2$control)
+qqline(mg2$control)
+```
+
+### Report
+
+Monta um texto base que pode ser usado no artigo.
+
+"Effect sizes were labelled following Cohen's (1988) recommendations. The Welch Two Sample t-test testing the difference between mg2\$Mg2 and mg2\$control (mean of x = 10.52, mean of y = 15.68) suggests that the effect is negative, statistically significant, and large (difference = -5.16, 95% CI \[-6.49, -3.83\], t(17.35) = -8.15, p \< .001."
+
+```{r}
+report(teste1)
+```
+
+```{r}
+wilcox.test(mg2$control, mg2$Mg2, 
+         paired = FALSE)
+```
+
+## Dois grupos dependentes
+
+Ocorre uma dependência do avaliador, pois ocorre a avaliação com e sem a escala diagramática, ou seja, existe dependência.
+
+Como são dois grupos, usa-se o teste T, mas devemos indicar a dependência. Uso de um teste pareado, diferente do exemplo anterior.
+
+```{r}
+escala <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1aID5Dh6PlBVCKzU1j7k-WA6zuWQWE2NhtWEgdJtt5iA/edit#gid=1139290215")
+
+escala
+```
+
+Mostrando a acurácia com e sem o auxílio da escala avaliadora.
+
+```{r}
+escala |> 
+  ggplot(aes(assessment, acuracia))+
+  geom_boxplot()
+```
+
+#### Teste T para a acurácia.
+
+Primeiro passar do formato longo para o formato largo, selecionando na escala 2 apenas os valores de interesse.
+
+```{r}
+escala2 <- escala |> 
+  dplyr::select(assessment, rater,acuracia) |> 
+  pivot_wider(names_from = assessment,
+              values_from = acuracia)
+  
+escala2
+```
+
+#### Teste shapiro wilk
+
+```{r}
+shapiro.test(escala2$Unaided)
+shapiro.test(escala2$Aided1)
+```
+
+Teste de variância.
+
+Rejeita-se H0 por p valor ser menor que 0,05.
+
+```{r}
+var.test(escala2$Unaided, escala2$Aided1)
+```
+
+O teste pareado dá a diferença entre os dados diferentes. O teste T foi usado porque a distribuição é normal.
+
+```{r}
+t.test(escala2$Aided1, escala2$Unaided,
+       paired = TRUE,
+       var.equal = FALSE)
+```
+
+### Teste não paramétrico
+
+Valores da tabela foram alterados para obtermos um novo boxplot.
+
+```{r}
+escala <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=1729131173")
+
+escala
+```
+
+```{r}
+escala |> 
+  ggplot(aes(assessment, acuracia))+
+  geom_boxplot()
+```
+
+#### Teste wilcox
+
+Conclui com base no valor de P. Rejeita-se a hipótese nula, pois os valores são diferentes. Ele corrobora com o teste T.
+
+Quando os dados são pareados, usamos "paired = TRUE", quando os não são pareados, usamos "paired = FALSE".
+
+Se as variâncias são heterogêneas, assumimos que "var.equal = FALSE".
+
+```{r}
+wilcox.test(escala2$Aided1,
+            escala2$Unaided,
+            paired = TRUE)
+```
+
+Teste shapiro wilk para observar normalidade.
+
+```{r}
+shapiro.test(escala2$Unaided)
+shapiro.test(escala2$Aided1)
+```
+
+## Teste de comparação de médias
+
+Estudando o conjunto de dados "micelial"
+
+H0 = Pelo menos uma das médias é diferente das demais.
+
+```{r}
+micelial <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=959387827")
+
+micelial
+```
+
+Gráfico jitter para explorar melhor o conjunto de dados.
+
+O que a ANOVA vai testar? Se existe pelo menos uma média que é diferente das outras médias. Ele testa no grupo e entre cada grupo.
+
+A ANOVA vai comparar as médias de 3 ou mais grupos.
+
+Com o gráfico a seguir, não é possível observar visualmente se há ou não diferença entre as médias das espécies. A distribuição não é homogênea.
+
+A variabilidade dentro de cada grupo é grande.
+
+```{r}
+micelial |> 
+  ggplot(aes(especie, tcm))+
+  geom_jitter(width = 0.05)
+```
+
+Teste de ANOVA as cegas, sem testar premissas. Através do "aov".
+
+Se as médias não diferem, não faz mais sentido continuar o teste de comparação de médias.
+
+```{r}
+anova1 <- aov(tcm ~ especie, data = micelial)
+
+anova(anova1)
+```
+
+Teste de ANOVA as cegas, sem testar premissas. Através do "lm". Adicionando o "-1" após a espécie, eu encontro diretamente as médias.
+
+```{r}
+m1 <- lm(tcm ~ especie -1, data = micelial)
+
+anova(m1)
+```
+
+Não existe diferença entre os resultados dos comandos "aov" e "lm". Dar preferência ao "lm".
+
+```{r}
+summary(m1)
+```
+
+Removendo um pouco das variabilidades do conjunto, obtemos a tabela a seguir.
+
+```{r}
+micelial1 <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=959387827")
+```
+
+```{r}
+micelial1 |> 
+  ggplot(aes(especie, tcm))+
+  geom_jitter(width = 0.05)
+```
+
+Agora, parece haver alguma diferença entre as médias. Rodaremos os testes.
+
+```{r}
+m1 <- lm(tcm ~ especie -1, data = micelial1)
+
+anova(m1)
+```
+
+```{r}
+summary(m1)
+```
+
+O Emmeans define as médias diretamente.
+
+Definindo um teste estatístico para comparação do crescimento.
+
+```{r}
+medias1 <- emmeans(m1, ~ especie)
+
+medias1
+```
+
+Para adicionar as letras, ou números correspondentes que indicam a diferença, usar o pacote multcomp e multcompview.
+
+```{r}
+cld(medias1)
+```
+
+Como saber se o modelo é confiável ou se preciso realizar conversões.
+
+Realizando a análise de normalidade dos resíduos.
+
+```{r}
+hist(m1$residuals)
+```
+
+O teste de shapiro executado indica normalidade dos resíduos. P valor = 0,8782. Não rejeita a hipótese.
+
+```{r}
+shapiro.test(m1$residuals)
+```
+
+```{r}
+bartlett.test(tcm ~ especie, data = micelial1)
+```
+
+Plot de diagnóstico dos resíduos.
+
+```{r}
+plot(simulateResiduals(m1))
+```
+
+Possibilidade para conferir as premissas.
+
+```{r}
+check_normality(m1)
+check_heteroscedasticity(m1)
+```
+
+Análise dos resíduos.
+
+```{r}
+check_model(m1)
+
+```
+
+# AULA 07 - 24/04/2024
+
+Continuação da aula anterior
+
+```{r}
+inseticida <- InsectSprays
+inseticida |> 
+  count(spray)
+```
+
+Como só temos um fator, a ANOVA neste caso seria unifatorial, com 6 níveis.
+
+```{r}
+inseticida |> 
+  ggplot(aes(spray, count))+
+  geom_boxplot()+
+  geom_jitter()+
+  theme_bw()
+```
+
+Observando os box, podemos inferir que as variâncias são heterogêneas. Tratamento com maior variabilidade (F), com menos variabilidade (C) e que possui outlier.
+
+O modelo de ANOVA é ajustado, e trabalhamos com os resíduos da ANOVA, e não com os dados originais, e aí são aplicados os testes.
+
+```{r}
+m1 <- lm(count ~ spray,
+         data = inseticida)
+m1
+```
+
+```{r}
+summary(m1)
+```
+
+```{r}
+anova(m1)
+```
+
+```{r}
+hist(m1$residuals)
+```
+
+```{r}
+shapiro.test(m1$residuals)
+```
+
+O h0 deste teste sugere que é normal. O Pvalor deste teste indica que é
+
+```{r}
+qqnorm(m1$residuals)
+qqline(m1$residuals)
+```
+
+Quando os pontos acompanham a linha de tendência central, acusa que os dados são normais.
+
+Premissa importante: tem maior peso na decisão - homocedasticidade.
+
+### Barlett Test
+
+```{r}
+bartlett.test(count ~ spray,
+              data = inseticida)
+```
+
+Para testar a normalidade.
+
+```{r}
+check_normality(m1)
+```
+
+Para testar heterocedasticidade.
+
+```{r}
+check_heteroscedasticity(m1)
+```
+
+```{r}
+plot(simulateResiduals(m1))
+```
+
+Transformação de dados:
+
+-   Extrair a raiz quadrada (apropriada pra dados de contagem);
+
+-   Outros métodos (procurar).
+
+### Alternativa 01 - Extração da Raiz quadrada
+
+Alternativa 01 - transformação
+
+```{r}
+inseticida <-  inseticida |> 
+  mutate(count2 = sqrt(count))
+
+inseticida |> 
+  ggplot(aes(spray, count2))+
+  geom_boxplot()+
+  geom_jitter()+
+  theme_bw()
+```
+
+A normalidade não é um problema aqui, e sim a variância.
+
+```{r}
+m2 <- lm(count2 ~ spray, 
+         data = inseticida)
+m2
+
+check_normality(m2)
+check_homogeneity(m2)
+```
+
+```{r}
+anova(m2)
+```
+
+```{r}
+hist(m2$residuals)
+```
+
+```{r}
+summary(m2)
+```
+
+```{r}
+qqnorm(m2$residuals)
+qqline(m2$residuals)
+```
+
+De acordo com o plot, é possível inferenciar que os problemas de normalidade foram resolvidos.
+
+```{r}
+shapiro.test(m2$residuals)
+```
+
+```{r}
+bartlett.test(count2 ~ spray,
+              data =inseticida)
+```
+
+```{r}
+check_normality(m2)
+```
+
+```{r}
+check_heteroscedasticity(m2)
+```
+
+```{r}
+plot(simulateResiduals(m2))
+```
+
+É possível observar que a transformação dos dados resolveu a dispersão das variâncias. Podemos continuar com o teste. O resultado foi não significativo.
+
+Podemos seguir com a estimativa das médias.
+
+A ANOVA é um teste mais robusto à falta de normalidade do que à falta de homocedasticidade.
+
+Levene test - undefined
+
+```{r}
+m1_medias <- emmeans(m1, ~spray)
+plot(m1_medias)
+```
+
+```{r}
+cld(m1_medias)
+```
+
+Agora, para o conjunto de dados transformados.
+
+```{r}
+m2_medias <- emmeans(m2, ~spray)
+plot(m2_medias)
+```
+
+```{r}
+cld(m2_medias)
+```
+
+Com a média transformada, são criados 3 grupos, ou seja, a discriminação foi melhor, e com isso a comparação foi melhor.
+
+```{r}
+pwpm(m2_medias)
+```
+
+As médias encontram-se na diagonal. Acima estão os valores de P valor para comparação das médias.
+
+```{r}
+pwpp(m2_medias)
+```
+
+### Alternativa 02 - teste não paramétrico
+
+O teste não paramétrico leva em consideração os valores originais, sem transformação.
+
+```{r}
+kruskal.test(count ~ spray,
+             data = inseticida)
+```
+
+Hipótese nula = as médias são iguais.
+
+Rejeita-se a hipótese nula, porque o P é menor que 0,05.
+
+```{r}
+m3 <- kruskal(inseticida$count,
+        inseticida$spray,
+        group = TRUE)
+m3
+```
+
+Este comando utiliza o teste Fisher. Utiliza o ranking criado para calcular a estatística de agrupamento.
+
+O teste não paramétrico trouxe o mesmo resultado que o teste paramétrico transformado (extraindo a raiz).
+
+### Alternativa 03 - GLMs
+
+Usa uma estatística mais moderna, não levando em conta se a distribuição é normal. Usa a distribuição de Poisson.
+
+O teste generalizado é mais aceito e estudado por trabalhar os dados originais. É uma forma mais "elegante" de trabalhar os dados.
+
+```{r}
+m4 <- glm(count ~ spray,
+          family = poisson,
+          data = inseticida)
+m4
+```
+
+```{r}
+summary(m4)
+Anova(m4)
+```
+
+```{r}
+plot(simulateResiduals(m4))
+```
+
+```{r}
+m4_medias <- emmeans(m4, ~ spray,
+                     type = "response")
+m4_medias
+```
+
+O intervalo indica que 95% das vezes a média se encontra dentro do intervalo.
+
+```{r}
+cld(m4_medias)
+```
+
+Este teste também separa em 3 grupos, da mesma forma que os dados transformados. Só que aqui, os dados são originais.
+
+## Transformação Box-Cox
+
+```{r}
+b <- boxcox(lm(inseticida$count+0.1 ~1))
+```
+
+```{r}
+lambda <- b$x[which.max(b$y)]
+lambda
+```
+
+Criando a variável transformada.
+
+```{r}
+inseticida$count3 <- (inseticida$count ^ lambda - 1) / lambda
+inseticida$count3
+
+```
+
+```{r}
+hist(inseticida$count)
+```
+
+### Parte 02 - aula 07
+
+Aplicação de Anova fatorial 2x2
+
+```{r}
+li <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=2023059672")
+li
+```
+
+```{r}
+sev <- li |> 
+  ggplot(aes(dose, severity, color = factor(dose)))+
+  geom_jitter(width = 0.1)+
+  facet_wrap(~treat)+
+  theme_bw()
+  
+sev
+```
+
+O gráfico mostra que a dose 2 do líquido iônico reduziu a severidade da doença semelhantemente às doses de fungicidas aplicados no outro nível de fator (tebuconazol). Para próximos experimentos poderiam ser realizados outros níveis do fator líquido iônico.
+
+### Modelo Fatorial (two-way ANOVA)
+
+```{r}
+mf <- lm(severity ~ treat*factor(dose),
+         data = li)
+mf
+
+anova(mf)
+```
+
+Aparecem mais duas linhas: dose, e interação tratamento:dose.
+
+Ocorre uma interação significativa. Devemos estimar as médias de um dentro do outro, ou seja, a combinação dos tratamentos. As médias devem ser estimadas pelas interações significativas, devem ser decompostas para haver comparação.
+
+Letras maiúsculas comparam as colunas, letras minúsculas comparam as linhas.
+
+#### Testando as premissas
+
+```{r}
+plot(simulateResiduals(mf))
+```
+
+```{r}
+check_normality(mf)
+```
+
+Estimar as médias do fungicida para cada dose.
+
+```{r}
+mf_medias <- emmeans(mf, ~ treat | dose)
+cld(mf_medias)
+```
+
+```{r}
+mf_medias <- emmeans(mf, ~ dose | treat)
+cld(mf_medias)
+```
+
+As duas tabelas acima indicam as letras para difenrenciação das médias.
+
+| Tratamento | 0,5     | 2,0     |
+|------------|---------|---------|
+| LI         | 0,29 Aa | 0,05 Ab |
+| TEB        | 0,02 Ba | 0,02 Aa |

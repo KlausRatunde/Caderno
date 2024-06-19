@@ -1,0 +1,420 @@
+---
+title: "aula_09"
+format: html
+editor: visual
+message: false
+warning: false
+---
+
+# Aula 09 - 15/05/2024
+
+## Pacotes
+
+```{r}
+library(gsheet)
+library(tidyverse)
+library(ggthemes)
+library(lme4)
+library(Matrix)
+library(car)
+library(performance)
+library(DHARMa)
+library(emmeans)
+library(multcomp)
+library(r4pde)
+library(broom)
+```
+
+```{r}
+milho <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=1345524759")
+milho
+```
+
+Este experimento foi delineado em *parcelas subdivididas*. Foram formados 4 blocos. O híbrido foi aleatorizado dentro dos blocos. Temos o fator Híbrido e o fator bloco, que é um fator aleatório. Dentro de cada bloco temos o híbrido, e dentro dos híbridos temos os métodos de aplicação.
+
+Temos duas opções: Lm ou Aov; ou utilizar o modelo misto (um fator fixo e um aleatório neste modelo).
+
+### Visualizar Index
+
+```{r}
+plot1 <- milho |> 
+  ggplot(aes(method, index))+
+  geom_jitter(width = 0.1, alpha = 0.2)+
+  facet_wrap( ~ hybrid)+
+  stat_summary(fun.data = "mean_cl_boot", color = "black", size = 0.5)+
+  theme_classic()
+plot1
+```
+
+## Modelo para parcela subdividida
+
+```{r}
+milho2 <- milho |> 
+  mutate(block = as.factor(block))
+
+mix2 <- lmer(index ~ hybrid*method + block + (1 | block/hybrid), data = milho2)
+
+Anova(mix2)
+```
+
+No fator aleatório, colocamos o hibrido dentro do bloco. ( 1 \| block/hybrid)
+
+Comparamos os híbridos nas linhas e os métodos nas colunas.
+
+### Testar as premissas
+
+```{r}
+check_normality(mix2)
+check_heteroscedasticity(mix2)
+```
+
+Normalidade ok, homogeneidade não atendeu. Procede-se a transformação para raiz quadrada.
+
+```{r}
+mix2 <- lmer(sqrt(index) ~ hybrid*method + block + (1|block/hybrid), data = milho2)
+mix2
+
+Anova(mix2)
+```
+
+```{r}
+plot(simulateResiduals(mix2))
+qqnorm(residuals(mix2))
+qqline(residuals(mix2))
+hist(residuals(mix2))
+```
+
+```{r}
+check_normality(mix2)
+check_heteroscedasticity(mix2)
+```
+
+Depois de carregar o Emmeans
+
+```{r}
+medias_milho <- emmeans(mix2,
+                        ~ hybrid | method,
+                        type = "response")
+medias_milho
+medias_milho2 <- emmeans(mix2,
+                         ~ method | hybrid,
+                         type = "response")
+medias_milho2
+
+cld(medias_milho2, Letters = letters)
+```
+
+Interpretação: significância da anova ou efeitos da interação; Realiza-se o teste de médias se há efeito; Comparamos a diferença dentro dos métodos, e depois, comparamos a diferença entre os métodos dentro dos híbridos.
+
+```{r}
+mix3 <- lmer(sqrt(yield) ~ hybrid*method + block + (1|block/hybrid), data = milho2)
+mix3
+Anova(mix3)
+check_normality(mix3)
+check_heteroscedasticity(mix3)
+```
+
+# Regressão linear
+
+Trabalharemos com o conjunto estande. Coluna 1 - tratamento (percentual das sementes inoculadas com o patógeno), Coluna 2 - bloco, Coluna 3 - número de plantas emergidas.
+
+Avalia o número de plantas infectadas pelo patógeno. Avalia a taxa de diminuição do estande com o aumento da inoculação do patógeno. Não são categorias. É uma variável quantitativa.
+
+```{r}
+estande <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1bq2N19DcZdtax2fQW9OHSGMR0X2__Z9T/edit#gid=401662555")
+```
+
+Plotar o gráfico para visualização dos dados.
+
+```{r}
+estande |> 
+  ggplot(aes(trat, nplants, color ))+
+  geom_jitter(width = 0.1, alpha = 0.2)+
+  #facet_wrap(~exp)+
+  stat_summary(fun.data = "mean_cl_boot", color = "black", size = 0.5)+
+  theme_classic()+
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+Mostramos biologicamente que há redução do estande de plantas conforme o aumento da inoculação do patógeno. podemos assumir dois modelos: linear simples ou quadrático. Podemos verificar qual modelo se adequa melhor à regressão.
+
+### Regressão linear simples por experimento
+
+## Modelo linear
+
+### Experimento 1
+
+Não rejeita-se a hipótese nula.
+
+```{r}
+exp1 <- estande |> 
+  filter(exp == 1)
+
+exp1 |> 
+  ggplot(aes(trat, nplants))+
+  geom_point()+
+  ylim(0,100)+
+  geom_smooth(method = "lm", se = F)
+
+lm1 <- lm(nplants ~ trat,
+          data = exp1)
+summary(lm1)
+
+```
+
+### Experimento 2
+
+Rejeita-se a hipótese nula
+
+```{r}
+exp2 <- estande |> 
+  filter(exp == 2)
+
+exp2 |> 
+  ggplot(aes(trat, nplants))+
+  geom_point()+
+  ylim(0,100)+
+  geom_smooth(method = "lm", se = F)
+
+lm2 <- lm(nplants ~ trat,
+          data = exp2)
+summary(lm2)
+```
+
+### Experimento 3
+
+Rejeita-se a hipótese nula.
+
+Poderíamos trabalhar com o modelo logarítmico (transformando).
+
+```{r}
+exp3 <- estande |> 
+  filter(exp == 3)
+
+exp3 |> 
+  ggplot(aes(trat, nplants))+
+  geom_point()+
+  ylim(0,100)+
+  geom_smooth(method = "lm", se = F)
+
+lm3 <- lm(nplants ~ trat,
+          data = exp3)
+summary(lm3)
+```
+
+### Usando GLM
+
+Podemos atribuir o glm com distribuição normal ou distribuição de poisson (considerando que a distribuição não é normal).
+
+### Experimento 1
+
+```{r}
+glm1 <- glm(nplants ~ trat, family = "gaussian",
+            data = exp1)
+summary(glm1)
+AIC(glm1)
+```
+
+### Experimento 2
+
+Neste caso, podemos assumir que o modelo linear foi melhor do que o modelo de poisson, devido à diferença de AIC
+
+```{r}
+glm2 <- glm(nplants ~ trat, family = "gaussian",
+            data = exp2)
+summary(glm2)
+AIC(glm2)
+
+glm2b <- glm <- glm(nplants ~ trat, family = "poisson",
+            data = exp2)
+summary(glm2b)
+AIC(glm2b)
+```
+
+### Experimento 3
+
+Modelo linear. O modelo de poisson no exp 3 é melhor do que um modelo linear, comparando os valores de AIC.
+
+```{r}
+glm3 <- glm(nplants ~ trat, family = "gaussian",
+            data = exp3)
+summary(glm3)
+AIC(glm3)
+
+glm3b <- glm <- glm(nplants ~ trat, family = "poisson",
+            data = exp3)
+summary(glm3b)
+AIC(glm3b)
+```
+
+Obs.: O professor alterou o modelo e considerou o experimento como fator aleatório, não como efeito fixo. Ainda assim, a melhor distribuição foi a distribuissão gaussiana (normal) usando um modelo linear generalizado. Como foi feito a seguir:
+
+```{r}
+glm33 <- glmer(nplants ~ trat + (trat | exp), family = "gaussian",
+            data = estande)
+summary(glm33)
+AIC(glm33)
+
+glm33b <- glmer(nplants ~ trat + (trat | exp), family = poisson (link = "log"),
+            data = estande)
+summary(glm33b)
+AIC(glm33b)
+```
+
+### Outro exemplo
+
+Carregar o pacote r4pde.
+
+Predizer uma resposta em relação à outra. Duas respostas numéricas contínuas, ajustanto o modelo linear ou não. Muitos estudos diferentes, gráfico geral. A saída dos gráficos mostra que com a ação do fungicida e redução da severidade acontece um incremento de produtividade da soja.
+
+```{r}
+wm <- WhiteMoldSoybean
+wm |> 
+  ggplot(aes(inc, yld))+
+  geom_point()+
+  facet_wrap(~ study)+
+  theme_minimal()+
+  geom_smooth(method = "lm", se = F)
+```
+
+### Modelo LMG
+
+O 3299 é a produtividade por ha quando não há controle. O 9,261 indica a redução de produtividade em kg/ha de acordo com o aumento da severidade.
+
+```{r}
+mofo1 <- lm(yld ~ inc,
+            data = wm)
+summary(mofo1)
+```
+
+Agrupando todos os estudos em um único gráfico.
+
+#### Mofo 1
+
+```{r}
+wm |> 
+  ggplot(aes(inc, yld, group = factor(study)))+
+  geom_point()+
+  #facet_wrap(~ study)+
+  theme_minimal()+
+  geom_smooth(method = "lm", se = F)
+
+mofo1 <- lm(yld ~ inc,
+            data = wm)
+summary(mofo1)
+```
+
+Obs.: Código muito importante para agrupar vários experimentos. Já detalha as médias para cada variável resposta.
+
+```{r}
+fit_all <- wm |> 
+  group_by(study) |> 
+  do(tidy(lm(.$yld ~ .$inc), conf.int = TRUE))
+fit_all
+```
+
+#### Mofo 2
+
+```{r}
+mofo2 <- wm |> 
+  group_by(study) |> 
+  do(tidy(lm(.$yld ~ .$inc), conf.int = TRUE))
+mofo2
+
+df<- mofo2 |> 
+  filter(term == ".$inc")
+mean(df$estimate)
+
+#Histograma da produtividade quando incidência é 0
+library(cowplot)
+p1 <- mofo2 |> 
+  filter(term == "(Intercept)") |> 
+           ggplot(aes(x = estimate))+
+           geom_histogram(bins = 8, color = "white", fill = "gray")+
+           theme_r4pde()+
+           labs(x = "Intercept", y = "frequency")
+p2 <- mofo2 |> 
+  filter(term == ".$inc") |> 
+           ggplot(aes(x = estimate))+
+           geom_histogram(bins = 8, color = "white", fill = "gray")+
+           theme_r4pde()+
+           labs(x = "Slopes", y = "frequency")
+library(patchwork)
+p1+p2
+```
+
+#### Mofo 3
+
+Modelo misto.
+
+```{r}
+mofo3 <- lmer(yld ~ inc + (inc | study), data = wm,
+              REML = F)
+summary(mofo3)
+```
+
+```{r}
+library(lme4)
+mofo3 <- lmer(yld ~ inc + (inc|study), data = wm, REML = F)
+summary(mofo3)
+#Esta estimativa é muito mais confiável
+# Inc do efeito fico sendo -17 é mais confiável, os outros métodos subestimam os valores
+#A incidência está causando uma redução na produtividade de -17kg (à medida que a incidência aumenta, a produtividade diminui em 17kg)
+
+Anova(mofo3)
+```
+
+```{r}
+wm <- WhiteMoldSoybean
+
+wm |> 
+  ggplot(aes(inc, yld)) +
+  geom_point() +
+  #facet_wrap(~ study) +
+  theme_minimal() +
+  geom_smooth(method = 'lm', se = T)
+```
+
+```{r}
+mofo1 <-  lm(yld ~ inc, data = wm)
+summary(mofo1)
+```
+
+```{r}
+fit_all <- wm |> 
+  group_by(study) |> 
+  do(tidy(lm(.$yld ~ .$inc), conf.int = T))
+fit_all
+```
+
+```{r}
+fit_all.interc <- fit_all |> 
+  filter(term == "(Intercept)")
+
+p1 <- fit_all.interc |> 
+  ggplot(aes(x = estimate)) +
+  geom_histogram(bins = 8) +
+  theme_clean() +
+  labs(x = 'Intercept')
+
+fit_all.inc <- fit_all |> 
+  filter(term == ".$inc")
+
+p2 <- fit_all.inc |> 
+  ggplot(aes(x = estimate)) +
+  geom_histogram(bins = 8) +
+  theme_clean() +
+  labs(x = 'Incidence')
+
+
+p1 + p2
+```
+
+```{r}
+mofo3 <-  lmer(yld ~ inc + (inc|study), data = wm, REML = F)
+
+summary(mofo3)
+Anova(mofo3) # para obter o valor p
+
+confint(mofo3, method = 'Wald') # para o calcular o IC
+```

@@ -1,0 +1,371 @@
+---
+title: "Aula_03.qmd"
+format: html
+editor: visual
+message: false
+warning: false
+---
+
+# Aula 03 - 20/03/2024
+
+# Pacotes
+
+```{r}
+library(patchwork)
+library(readxl)
+library(tidyverse)
+```
+
+# Histograma e importação de arquivos .csv da internet
+
+Um histograma é uma espécie de gráfico de barras que demonstra uma distribuição de frequências. No histograma, a base de cada uma das barras representa uma classe e a altura representa a quantidade ou frequência absoluta com que o valor de cada classe ocorre.
+
+### Carregando planilhas da nuvem em formato .csv
+
+Para a criação desse gráfico, é importante que se tenha uma fonte confiável de dados, e que estes sejam de fácil acesso. Uma forma de importar esses dados é através de uma planilha no formato ".csv" da nuvem, o que nos permite acessar de qualquer lugar.
+
+```{r}
+
+#Para remover as mensagens de erro, adicionar no cabeçalho as mensagens a seguir.
+#warning : false
+#message : false
+
+cr <- read_csv("https://raw.githubusercontent.com/emdelponte/paper-coffee-rust-Ethiopia/master/data/survey_clean.csv")
+cr
+
+#para carregar arquivos csv, devo carregar o pacote tidyverse e depois o comando read_csv
+
+glimpse(cr)
+#para explorar melhor os dados
+
+#como visualizar a disposiição da incidência nas fazendas? qual artifício do R usar?
+#histograma: pega uma variável contínua e coloca em categorias.
+cr |> 
+  ggplot(aes(x = inc))+
+  geom_histogram()
+```
+
+## Sumarizar
+
+O comando `summary()` permite organizar os valores, observando desta forma os valores de média, mediana, dentre outros. Quando uma variável é quantitativa (*numeric*), o comando `summary()` retorna algumas estatísticas sobre o vetor de dados.
+
+```{r}
+cr |> 
+  ggplot(aes(x = inc))+
+  geom_histogram()
+
+#usar o summary para observar os valores sobre a incidência, observar média, mínima, máxima, etc...
+summary(cr$inc)
+```
+
+## Criando Box plot
+
+O "Box plot" é uma ferramenta gráfica utilizada para representar e ilustrar um conjunto de dados distribuídos em cinco diferentes medidas, que possiblitam diversos tipos de observações em uma única análise.
+
+```{r}
+cr |> 
+  ggplot(aes(x = farm, y = inc))+ 
+  geom_boxplot()
+
+```
+
+O box plot permite selecionar apenas as variáveis desejadas para compor o gráfico, como exemplo, separaremos as duas regiões.
+
+```{r}
+cr |> 
+  ggplot(aes(x = inc))+
+  geom_boxplot()+
+  facet_wrap(~region)
+
+#comando usado para separar por regiões.
+
+summary(cr$inc)
+```
+
+Para resumir os dados e mostrar algumas medidas, utilizaremos o comando "summary()".
+
+```{r}
+#comando usado para sumarizar por região, separando por incidência média.
+cr |> group_by(region) |> 
+  summarize(inc_mean = mean(inc))
+```
+
+Também é possível calcular as médias e medianas de cada conjunto selecionado (região), como feito a seguir:
+
+```{r}
+cr |> group_by(region) |> 
+  summarize(inc_mean = median(inc), sd_mean = sd(inc))
+```
+
+Da mesma forma, para outro conjunto (cultivar):
+
+```{r}
+cr |> group_by(cultivar) |> 
+  summarise(inc_mean = median(inc), 
+            sd_mean = sd(inc))
+```
+
+```{r}
+cr |> 
+  group_by(cultivar, region) |> 
+  summarise(inc_med = median(inc),
+            inc_mean = mean(inc),
+            sd_mean = sd(inc))
+```
+
+### Relação entre incidência e severidade
+
+```{r}
+#relação entre incidência e severidade,
+#Incidência ou severidade? será que existe correlação?
+#primeiro argumato = eixo X, segundo argumento = eixo Y.
+#Trabalhar com a severidade por ser mais importante, mais informativo.
+
+cr |>
+  ggplot(aes(inc, sev2, color = region))+
+  geom_point()
+
+summary(cr)
+```
+
+### Histograma por região
+
+```{r}
+cr |> 
+  ggplot(aes(x = inc))+
+  geom_histogram()+
+  facet_wrap(~region)
+```
+
+```{r}
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram()+
+  facet_grid(region~cultivar)
+  
+```
+
+### Adicionando escala de cores
+
+```{r}
+library(ggthemes)
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram()+
+  facet_grid(region~cultivar)+
+  scale_fill_colorblind()
+```
+
+### Adicionar escala de cores manualmente
+
+```{r}
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram()+
+  facet_grid(region~cultivar)+
+  scale_fill_manual(values = c("red","blue"))
+```
+
+### Mudar posição da legenda
+
+A legenda de uma figura ou gráfico deve estar sempre bem localizada.
+
+```{r}
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram()+
+  facet_grid(region~cultivar)+
+  scale_fill_manual(values = c("red","blue"))+
+  theme(legend.position = "bottom")
+```
+
+### Alterando posição dos descritores da legenda
+
+```{r}
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram()+
+  facet_grid(region~cultivar)+
+  theme_minimal()+
+  theme(legend.position = "bottom")+
+  scale_fill_manual(values = c("red","blue"))+
+  labs(y = "Frequency",
+       x = "Severity (%)", fill = "Region")
+```
+
+### Tamanho da fonte (base_size)
+
+```{r}
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram()+
+  facet_grid(region~cultivar)+
+  theme_minimal(base_size = 14)+
+  theme(legend.position = "bottom")+
+  scale_fill_manual(values = c("red","blue"))+
+  labs(y = "Frequency",
+       x = "Severity (%)", fill = "Region")
+
+
+```
+
+### Salvando a imagem
+
+```{r}
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram()+
+  facet_grid(region~cultivar)+
+  theme_minimal(base_size = 14)+
+  theme(legend.position = "bottom")+
+  scale_fill_manual(values = c("red","blue"))+
+  labs(y = "Frequency",
+       x = "Severity (%)", fill = "Region")
+
+ggsave("Histograma.png")
+```
+
+### Mudando o número de colunas
+
+```{r}
+cr |> 
+  ggplot(aes(x = sev2, fill = region))+
+  geom_histogram(color = "white")+
+  facet_wrap(region~cultivar, ncol = 6)+
+  theme_minimal(base_size = 14)+
+  theme(legend.position = "bottom")+
+  scale_fill_manual(values = c("red","blue"))+
+  labs(y = "Frequency",
+       x = "Severity (%)", fill = "Region")
+
+# ggsave("Imagens/Histograma03.png")
+```
+
+### Criando subconjuntos
+
+```{r}
+#criar um subconjunto através da seleção de variáveis
+
+cr |> 
+  select(farm, region, sev2)
+```
+
+```{r}
+#restingindo o banco de cados à informação desejada.
+cr2 <- cr |> 
+  select(farm, region, sev2) |> 
+  filter (region == "Oromia")
+cr2
+```
+
+#### Utiliza as funções 'select()" e "filter()" do pacote **dplyr** para selecionar colunas e linhas, respectivamente.
+
+```{r}
+#Utiliza as funções 'select()" e "filter()" dp pacote **dplyr** para selecionar colunas e linhas, respectivamente.
+
+# Filtra "Oromia"
+cr_oromia <- cr |> 
+  select(farm, region, cultivar, sev2) |> 
+  filter (region == "Oromia")
+
+# Filtra "SNNPR"
+cr_pr <- cr |>
+  select(farm, region, cultivar, sev2) |> 
+  filter (region == "SNNPR")
+  
+cr_pr; cr_oromia
+```
+
+## Criando gráficos
+
+VIzualiar os subconjuntos e criando gráficos a partir do ggplot para cada subconjunto.
+
+```{r}
+p1 <- cr_oromia |> 
+  ggplot(aes(x = cultivar, y = sev2 ))+
+  geom_boxplot()+
+  labs(title = "Oromia",
+  y= "Severity (%)", x = "Cultivar")
+
+p1
+```
+
+```{r}
+p2 <- cr_pr |> 
+  ggplot(aes(x = cultivar, y = sev2 ))+
+  geom_boxplot()+
+  labs(title = "SNNPR", y= "Severity (%)", x = "Cultivar")
+
+p2
+```
+
+#### Criando um gráfico ao lado do outro.
+
+```{r}
+library(patchwork)
+p1 <- cr_oromia |> 
+  ggplot(aes(x = cultivar, y = sev2, fill = cultivar ))+
+  geom_boxplot()+
+  scale_fill_few()+
+  theme_few()+
+  theme(legend.title = element_blank())+
+  labs( y= "Severity (%)", x = "")+
+  coord_flip()
+p1
+
+p2 <- cr_pr |> 
+  ggplot(aes(x = cultivar, y = sev2, fill = cultivar ))+
+  geom_boxplot()+
+  scale_fill_few()+
+  theme_few()+
+   theme(legend.title = element_blank())+
+  labs(y= "Severity (%)", x = "")+
+  coord_flip()
+
+p2 
+#Para juntar os dois gráficos
+
+p1/p2
+```
+
+```{r}
+p1 / (p2 + p1)
+```
+
+#### Colocar só uma legenda
+
+```{r}
+help("patchwork")
+
+(p1 | p2) + 
+  plot_layout(guides = 'collect')+
+  plot_annotation(tag_levels = 'A')
+
+#para remover o "Oromia" e "SNNPR" do título, basta remover o comando na atribuição anterior.
+
+
+```
+
+```{r}
+p1 / p2
+(p1 / p2) + 
+  plot_layout(guides = 'collect',
+              axes = 'collect')+
+  plot_annotation(tag_levels = 'A',
+                  title = "Coffe rust in Ethiopia", caption = "Source: Del Ponte (2022.")
+
+# ggsave("Imagens/Patch2.png", width = 5, height = 4)
+```
+
+```{r}
+p3 <-  cr_oromia |> 
+  ggplot(aes(x = sev2))+
+  geom_histogram()+
+  theme_minimal()
+
+p1 + inset_element(p3, left = 0.6, bottom = 0.6, right = 1, top = 1)
+
+# ggsave("Imagens/plot2.png")
+
+p4 <- p1 + inset_element(p3, left = 0.6, bottom = 0.6, right = 1, top = 1)
+```

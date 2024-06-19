@@ -1,0 +1,66 @@
+project:
+  type: website
+  output-dir: docs
+  
+execute:
+    cache: true
+    freeze: auto
+    warning: false
+    
+website:
+  title: Caderno de aulas
+  favicon: img02.jpeg
+  
+  navbar:
+    pinned: true
+    logo: img02.jpeg
+    
+    left:
+    - text: R básico
+      menu:
+      - href: Introducao.qmd
+        text: Introdução ao RStudio
+      - href: Aula_01.qmd
+        text: Comandos básicos para começar no R
+      
+    - text: Importação de arquivos
+      menu:
+      - href: aula_02.qmd
+        text: Planilhas Excel e Docs
+      - href: aula_03.qmd
+        text: Importação de arquivos Web
+        
+        
+    - text: Gráficos no RStudio
+      menu: 
+      - href: aula_04.qmd
+        text: Gráficos em **ggplot** parte 01
+      - href: Aula_05.qmd
+        text: Gráficos em **ggplot** parte 02
+    
+    - text: Estatística no RStudio
+      menu:
+      - href: Aula_06_07.qmd
+        text: Estatística descritiva e inferencial - Testes
+      - href: Aula_08.qmd
+        text: Análises estatísticas - Regressão
+      - href: Aula_09.qmd
+        text: Análises estatísticas - LM e GLM
+      - href: Aula_10.qmd
+        text: Análises estatísticas - Correlação
+        
+    - text: Mapas no Rstudio
+      menu:
+      - href: aula_11.qmd
+        text: Criando Mapas
+        
+    
+
+format:
+  html:
+    theme: flatly
+    dark: superhero
+    css: styles.css
+    toc: true
+
+editor: visual

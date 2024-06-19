@@ -1,0 +1,163 @@
+---
+title: "Aula_11"
+format: html
+editor: visual
+message: false
+warning: false
+---
+
+## AULA 11 - 19/06/2024
+
+## Criando mapas em R
+
+## Pacotes
+
+```{r}
+library(gsheet)
+library(tidyverse)
+library(dplyr)
+library(rnaturalearth)
+library(remotes)
+library(r4pde)
+library(ggthemes)
+library(ggspatial)
+library(plotly)
+library(leaflet)
+library(ggrepel)
+library(scatterpie)
+```
+
+```{r}
+world <- ne_countries()
+```
+
+Pode ser alterada a cor de preenchimento, cor das linhas, expessura das linhas.
+
+```{r}
+sbr <- RustSoybean
+sbr |> 
+  ggplot(aes(longitude, latitude))+
+  geom_point()+
+  coord_sf()
+```
+
+```{r}
+BRA <-ne_states(country = "Brazil",
+                returnclass = "sf")
+ggplot(BRA) +
+  geom_sf(fill = "white",
+          color = "black",
+          linewidth = 1)+
+  geom_point( data = sbr, aes(longitude, latitude),
+              color = "black") +
+  theme_map()
+  
+```
+
+Adicionando pontos que contenham latitude e longitude. (Pacote r4pde). Precisa que seja um data frame.
+
+Este pacote foi usado para criar os gráficos acima e abaixo.
+
+```{r}
+ES <- BRA |> 
+  filter(name_en == "Espírito Santo")
+MG <- BRA |> 
+  filter(name_en == "Minas Gerais")
+```
+
+Selecionando apenas um Estado. Foram adicionadas três camadas diferentes para chegar a este mapa.
+
+```{r}
+BRA <-ne_states(country = "Brazil",
+                returnclass = "sf")
+ggplot(BRA) +
+  geom_sf(fill = "white",
+          color = "black",
+          linewidth = 1)+
+  geom_sf(data = ES, fill = "red")+
+  geom_sf(data = MG, fill = "yellow")+
+  geom_point( data = sbr, aes(longitude, latitude),
+              color = "black") +
+  theme_map()
+```
+
+Adicionando Rosa dos Ventos (Pacote ggspatial)
+
+```{r}
+Bra <- ggplot(BRA) +
+  geom_sf(fill = "white",
+          color = "black",
+          linewidth = 1)+
+  geom_sf(data = ES, fill = "red")+
+  geom_point( data = sbr, aes(longitude, latitude),
+              color = "black") +
+  theme_map()+
+  annotation_north_arrow(which_north = "grid")
+```
+
+Usando o pacote plotly para criar um mapa interativo. Esse pacote importa o mapa criado e o torna interativo.
+
+```{r}
+ggplotly(Bra)
+```
+
+Criando um mapa interativo com o pacote leaflet.
+
+Quando mais eu aumento o número co zoom, mais próximo ele chega do centro da imagem das coordenadas.
+
+```{r}
+Viçosa <- leaflet() |> 
+  addTiles() |> 
+  setView(lng = -42.8825, lat = - 20.7546, zoom = 15)
+Viçosa
+```
+
+Alterando as camadas dos mapas utilizados. Foi realizado apenas um teste aqui. O ideal é usar o mapa base que foi feito acima.
+
+```{r}
+leaflet() |> 
+  addProviderTiles(providers$Esri.NatGeoWorldMap) |> 
+  setView(lng = -42.8825, lat = - 20.7546, zoom = 5)
+```
+
+Adicionando pontos. Pode-se remover o setView, que o addCircle encontra os pontos e os marca no mapa.
+
+```{r}
+leaflet(sbr) |> 
+  addTiles() |> 
+  #setView(lng = -42.8825, lat = - 20.7546, zoom = 5) |> 
+  addCircleMarkers(radius = 2)
+```
+
+```{r}
+Joatuba <- leaflet() |> 
+  addTiles() |> 
+  setView(lng = -40.950698190088296, lat = -19.87009960422699, zoom = 15)
+Joatuba
+
+```
+
+Usando o pacote (ggrepel) é possível adicionar nomes aos pontos no mapa.
+
+```{r}
+mapa <- gsheet2tbl("https://docs.google.com/spreadsheets/d/1pAIFKsdKxk_UQQXdYwIO-O5NOkYNhpclImJcLziYnk4/edit?usp=sharing")
+```
+
+```{r}
+Bra2 <- ggplot(BRA) +
+  geom_sf(fill = "gray70", alpha = 0.5, color = "white") +
+  coord_sf()+
+  geom_scatterpie(aes(x = lon, y = lat, r = 0.6), alpha = 0.8, color = NA, data = mapa,
+                  cols = c("DFC",
+                           "MA",
+                           "FER",
+                           "ANTR",
+                           "OIDIO"))+
+  geom_text_repel(data = mapa, aes(lon, lat, label = Local),
+                   size = 2, nudge_x = 0.2, nudge_y = 0.27, color = "gray30", family = "Arial") +
+  ggthemes::scale_fill_calc()+
+  ggthemes::theme_map() +
+  labs(x = "Longitude", y = "Latitude", legend = "", fill = "Doença")+
+  theme(legend.position = "bottom", text = element_text(family = "Arial",size = 8))
+Bra2
+```

@@ -1,0 +1,47 @@
+---
+title: "Introdução"
+format: html
+editor: visual
+message: false
+warning: false
+editor_options: 
+  chunk_output_type: console
+---
+
+## Apresentação ao RStudio
+
+O **RStudio** é um ambiente de desenvolvimento integrado (IDE) para R e uma linguagem de programação popular para análise de dados e estatísticas. A escrita, execução e visualização de código R são facilitadas pelo RStudio, que oferece uma interface intuitiva e ferramentas adicionais que tornam o trabalho com R mais produtivo e eficiente.
+
+## Download do programa
+
+Link para instalação do R e do R Studio (https://posit.co/download/rstudio-desktop/). Siga o passo a passo para instalação e configuração no seu dispositivo.
+
+## Interface do RStudio
+
+O RStudio possui uma interface simples e de fácil entendimento. Na tela inicial, temos as opções a seguir.
+
+**Interface de Usuário Integrada:**
+
+-   **Console:** Onde você pode executar comandos R interativamente.
+
+-   **Editor de Script:** Um editor de texto avançado para escrever e salvar scripts R.
+
+-   **Painel de Ambiente:** Mostra os objetos atualmente carregados no seu espaço de trabalho.
+
+-   **Painel de Arquivos/Plots/Help/Packages:** Gerenciamento de arquivos, visualização de gráficos, acesso à documentação e instalação de pacotes, respectivamente.
+
+## RMarkdown e Quarto
+
+Markdown é uma linguagem de marcação, ou seja, não é uma linguagem de programação. Linguagens de marcação dizem como algo deve ser entendido, mas não têm capacidade de processamento e execução de funções. Por exemplo, HTML é uma linguagem de marcação. Ela apenas diz como uma página web está estruturada, mas não executa nenhum processamento. O Markdown, da mesma forma, apenas informa como um documento está estruturado.
+
+o **RMarkdown** nada mais é do que a possibilidade de executar-se scripts em R (além de outras linguagens) e incorporá-los a um arquivo Markdown (extensão `.md`). O pacote `knitr` executará “pedaços” (*chunk*) de códigos e gerará um arquivo `.md` com os códigos e seus resultados. Na sequência, o `pandoc`, que é um conversor, converte-o para a linguagem desejada, gerando os arquivos nos formatos escolhidos (.html, .docx, .pdf, .odt).
+
+Já o **Quarto** é uma versão multilíngue da próxima geração do R Markdown (do RStudio) e inclui dezenas de novos recursos, ao mesmo tempo em que é capaz de renderizar a maioria dos arquivos `.Rmd` existentes sem modificação.
+
+## Objetos e funções
+
+O R te permite salvar valores dentro de um **objeto**. Um objeto é simplesmente um nome que guarda um valor. Para criar um objeto, utilizamos o operador `<-`. Exisem algumas regras para dar nomes aos objetos. A mais importante é: o nome deve começar com uma letra. O nome pode conter números, mas não pode começar com números. Você pode usar pontos `.` e underlines `_` para separar palavras.
+
+Enquanto objetos são *nomes* que guardam *valores*, funções no R são *nomes* que guardam um **código de R**. A ideia é muito simples: sempre que você rodar uma função, o código que ela guarda será executado e um resultado nos será devolvido.
+
+O operador %\>% (pipe) usa o valor resultante da expressão do lado esquerdo como primeiro argumento da função do lado direito. Usa-se o pipe (\|\> ou %\>%) para enfatizar uma sequência de comandos ou ações no chunk e para evitar adicionar o nome do data frame dentro da função ggplot. O pipe deve ter sempre um espaço antes dele e, geralmente, deve ser seguido por uma nova linha. Após a primeira etapa, cada linha deve ter dois espaços, o que torna mais fácil adicionar outras etapas ou reorganizar as já existentes.
