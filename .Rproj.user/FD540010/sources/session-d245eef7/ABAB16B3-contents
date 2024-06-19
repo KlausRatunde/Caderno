@@ -59,7 +59,7 @@ website:
 format:
   html:
     theme: superhero
-    dark: solar
+    dark: slate
     css: styles.css
     toc: true
 
