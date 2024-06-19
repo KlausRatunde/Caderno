@@ -54,7 +54,25 @@ website:
       - href: aula_11.qmd
         text: Criando Mapas
         
-    
+    right:
+       - icon: linkedin
+         href: https://www.linkedin.com/in/klaus-henrique-ratunde-37522911a
+       - icon: instagram
+         menu: 
+            - text: Klaus Henrique Ratunde
+              url: https://www.instagram.com/klausratunde/
+            - text: Emerson M. Del Ponte
+              url: https://www.instagram.com/emdelponte/
+            - text: Fitopatolofia UFV
+              url: https://www.instagram.com/fitopatologiaufv/
+       - icon: youtube
+         href: https://www.youtube.com/edelponte
+       - icon: github
+         menu:
+            - text: Klaus Henrique Ratunde
+              url: https://github.com/KlausRatunde
+            - text: Emerson M. Del Ponte
+              url: https://github.com/emdelponte
 
 format:
   html:
