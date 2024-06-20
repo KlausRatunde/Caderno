@@ -1,5 +1,5 @@
 ---
-title: "Aula_04"
+title: "Gráficos em ggplot - parte 01"
 format: html
 editor: visual
 message: false

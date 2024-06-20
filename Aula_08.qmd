@@ -1,12 +1,10 @@
 ---
-title: "Aula_07"
+title: "Análises estatísticas - Regressão"
 format: html
 editor: visual
 message: false
 warning: false
 ---
-
-## AULA 08 - 08/05/2024
 
 ## Pacotes
 

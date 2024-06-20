@@ -1,5 +1,5 @@
 ---
-title: "aula_09"
+title: "Análises estatísticas - LM e GLM"
 format: html
 editor: visual
 message: false

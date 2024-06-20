@@ -1,12 +1,10 @@
 ---
-title: "Aula_06"
+title: "Estatística Descritiva e Inferencial - Testes"
 format: html
 editor: visual
 message: false
 warning: false
 ---
-
-# AULA 06 - 17/04/2024
 
 ## Estatística Descritiva e Estatística Inferencial
 

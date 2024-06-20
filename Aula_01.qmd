@@ -1,5 +1,5 @@
 ---
-title: "aula_01"
+title: "Comandos Básicos para começar no R"
 format: html
 editor: visual
 message: false

@@ -1,5 +1,5 @@
 ---
-title: "Aula_02"
+title: "Planilhas Excel e Docs"
 format: html
 editor: visual
 editor_options: 
